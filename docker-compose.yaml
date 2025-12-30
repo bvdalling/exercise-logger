@@ -6,8 +6,10 @@ services:
     container_name: gym-app-backend
     environment:
       - NODE_ENV=production
+      - PORT=3001
+      - HOST=0.0.0.0
       - DATA_DIR=/app/data
-      - FRONTEND_URL=http://frontend:80
+      - FRONTEND_URL=${COOLIFY_URL}
       - SESSION_SECRET=${SESSION_SECRET}
     volumes:
       - ./backend/data:/app/data
@@ -18,8 +20,8 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        - VITE_API_URL=http://backend:3001/api
+        - VITE_API_URL=/api
     container_name: gym-app-frontend
-    expose:
+    ports:
       - "${PORT}:80"
     restart: unless-stopped
