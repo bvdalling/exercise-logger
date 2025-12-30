@@ -11,13 +11,11 @@ const __dirname = path.dirname(__filename)
 export default defineConfig({
   server: {
     host: '0.0.0.0',
-    // Prioritize FRONTEND_PORT over PORT to avoid conflict with backend PORT=3001
-    port: parseInt(process.env.FRONTEND_PORT || process.env.PORT || '5173', 10),
-    strictPort: false, // Allow Vite to try next available port if specified port is in use
+    port: 5173,
+    strictPort: true,
     proxy: {
       '/api': {
-        // Use BACKEND_PORT env var if set (for Coolify), otherwise default to 3001
-        target: `http://127.0.0.1:${process.env.BACKEND_PORT || process.env.PORT || '3001'}`,
+        target: `http://127.0.0.1:3111`,
         changeOrigin: true,
         secure: false,
       },

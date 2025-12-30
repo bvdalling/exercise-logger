@@ -91,4 +91,3 @@ func VerifyBackupCode(hashedCodes, code string) bool {
 	}
 	return false
 }
-

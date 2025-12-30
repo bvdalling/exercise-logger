@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"strings"
 
 	"gym-app-backend/database"
@@ -26,15 +25,8 @@ func main() {
 	}
 
 	// Get configuration from environment
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "3001"
-	}
-
-	host := os.Getenv("HOST")
-	if host == "" {
-		host = "127.0.0.1" // Default to localhost-only for internal access
-	}
+	port := "3111"
+	host := "127.0.0.1" // Default to localhost-only for internal access
 
 	// Setup routes
 	mux := http.NewServeMux()
