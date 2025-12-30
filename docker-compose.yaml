@@ -25,10 +25,8 @@ services:
       args:
         - VITE_API_URL=/api
     container_name: gym-app-frontend
-    expose:
-      - "80"
     ports:
-      - "80:80"
+      - "${PORT}:80"
     restart: unless-stopped
     networks:
       - app-network
