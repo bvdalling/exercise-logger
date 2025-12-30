@@ -16,7 +16,8 @@ export default defineConfig({
     strictPort: false, // Allow Vite to try next available port if specified port is in use
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        // Use BACKEND_PORT env var if set (for Coolify), otherwise default to 3001
+        target: `http://127.0.0.1:${process.env.BACKEND_PORT || process.env.PORT || '3001'}`,
         changeOrigin: true,
         secure: false,
       },
