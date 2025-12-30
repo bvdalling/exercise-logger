@@ -9,6 +9,19 @@ const __dirname = path.dirname(__filename)
 
 // https://vite.dev/config/
 export default defineConfig({
+  server: {
+    host: '0.0.0.0',
+    // Prioritize FRONTEND_PORT over PORT to avoid conflict with backend PORT=3001
+    port: parseInt(process.env.FRONTEND_PORT || process.env.PORT || '5173', 10),
+    strictPort: false, // Allow Vite to try next available port if specified port is in use
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
+  },
   plugins: [
     vue(),
     VitePWA({

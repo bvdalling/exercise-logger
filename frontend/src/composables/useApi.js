@@ -1,4 +1,5 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+// Use relative URL to leverage Vite proxy, or absolute URL if VITE_API_URL is set
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api'
 
 async function request(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`
@@ -13,14 +14,38 @@ async function request(endpoint, options = {}) {
 
   try {
     const response = await fetch(url, config)
-    const data = await response.json()
+    
+    // Check if response has content
+    const contentType = response.headers.get('content-type')
+    let data
+    
+    if (contentType && contentType.includes('application/json')) {
+      const text = await response.text()
+      if (text) {
+        try {
+          data = JSON.parse(text)
+        } catch (parseError) {
+          console.error('Failed to parse JSON response:', text)
+          throw new Error('Invalid response from server')
+        }
+      } else {
+        console.error('Empty response body')
+        throw new Error('Empty response from server')
+      }
+    } else {
+      // Non-JSON response
+      const text = await response.text()
+      console.error('Non-JSON response:', text)
+      throw new Error(text || 'Unexpected response format')
+    }
 
     if (!response.ok) {
-      throw new Error(data.error || 'Request failed')
+      throw new Error(data?.error || data?.message || `Request failed with status ${response.status}`)
     }
 
     return data
   } catch (error) {
+    console.error('API request error:', error)
     if (error.message) {
       throw error
     }
