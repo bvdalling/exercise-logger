@@ -6,14 +6,17 @@ services:
     container_name: gym-app-backend
     environment:
       - NODE_ENV=production
-      - PORT=3001
-      - HOST=0.0.0.0
+      - HOST=${HOST:-0.0.0.0}
       - DATA_DIR=/app/data
       - FRONTEND_URL=${COOLIFY_URL}
       - SESSION_SECRET=${SESSION_SECRET}
     volumes:
       - ./backend/data:/app/data
+    expose:
+      - "3001"
     restart: unless-stopped
+    networks:
+      - app-network
 
   frontend:
     build:
@@ -22,6 +25,17 @@ services:
       args:
         - VITE_API_URL=/api
     container_name: gym-app-frontend
+    expose:
+      - "80"
     ports:
-      - "${PORT}:80"
+      - "80:80"
     restart: unless-stopped
+    networks:
+      - app-network
+      - public-network
+    depends_on:
+      - backend
+
+networks:
+  app-network:
+  public-network:
