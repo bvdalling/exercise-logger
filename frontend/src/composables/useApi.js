@@ -60,10 +60,10 @@ export async function login(username, password) {
   })
 }
 
-export async function register(username, password) {
+export async function register(username, email, password) {
   return request('/auth/register', {
     method: 'POST',
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify({ username, email, password }),
   })
 }
 
@@ -77,10 +77,17 @@ export async function getCurrentUser() {
   return request('/auth/me')
 }
 
-export async function resetPassword(recoveryUuid, recoverySecret, newPassword) {
+export async function requestPasswordReset(email) {
+  return request('/auth/request-password-reset', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  })
+}
+
+export async function resetPassword(token, newPassword) {
   return request('/auth/reset-password', {
     method: 'POST',
-    body: JSON.stringify({ recoveryUuid, recoverySecret, newPassword }),
+    body: JSON.stringify({ token, newPassword }),
   })
 }
 
@@ -115,6 +122,37 @@ export async function deleteExercise(id) {
 
 export async function getExerciseProgress(id) {
   return request(`/exercises/${id}/progress`)
+}
+
+// Public Exercise APIs
+export async function getPublicExercises() {
+  return request('/public-exercises')
+}
+
+export async function getPublicExercise(id) {
+  return request(`/public-exercises/${id}`)
+}
+
+// Reports APIs
+export async function sendWeeklyReport() {
+  return request('/reports/weekly', {
+    method: 'POST',
+  })
+}
+
+// TOTP APIs
+export async function setupTOTP(code) {
+  return request('/auth/setup-totp', {
+    method: 'POST',
+    body: JSON.stringify({ code }),
+  })
+}
+
+export async function verifyTOTP(username, code) {
+  return request('/auth/verify-totp', {
+    method: 'POST',
+    body: JSON.stringify({ username, code }),
+  })
 }
 
 // Workout Log APIs

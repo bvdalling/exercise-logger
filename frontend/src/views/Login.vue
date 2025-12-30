@@ -20,6 +20,17 @@
               :disabled="authStore.loading"
             />
           </div>
+          <div v-if="!isLogin" class="space-y-3">
+            <Label for="email" class="text-base font-semibold">Email</Label>
+            <Input
+              id="email"
+              v-model="email"
+              type="email"
+              placeholder="Enter your email"
+              required
+              :disabled="authStore.loading"
+            />
+          </div>
           <div class="space-y-3">
             <Label for="password" class="text-base font-semibold">Password</Label>
             <Input
@@ -28,7 +39,21 @@
               type="password"
               placeholder="Enter your password"
               required
-              :disabled="authStore.loading"
+              :disabled="authStore.loading || requiresTOTP"
+            />
+          </div>
+          <div v-if="requiresTOTP" class="space-y-3">
+            <Label for="totpCode" class="text-base font-semibold">Enter 6-digit code from your authenticator app</Label>
+            <Input
+              id="totpCode"
+              v-model="totpCode"
+              type="text"
+              placeholder="000000"
+              maxlength="6"
+              pattern="[0-9]{6}"
+              class="text-center text-2xl font-mono tracking-widest"
+              :disabled="verifyingTOTP"
+              @input="handleTOTPInput"
             />
           </div>
           <div v-if="authStore.error" class="text-base text-red-600 dark:text-red-400 font-medium p-4 rounded-2xl glass-card dark:glass-card-dark">
@@ -55,7 +80,7 @@
             <button
               v-if="isLogin"
               type="button"
-              @click="router.push('/reset-password')"
+              @click="router.push('/forgot-password')"
               class="text-primary hover:underline block"
               :disabled="authStore.loading"
             >
@@ -132,6 +157,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useScrollRestore } from '@/composables/useScrollRestore'
+import { verifyTOTP } from '@/composables/useApi'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -150,9 +176,14 @@ const authStore = useAuthStore()
 
 const isLogin = ref(true)
 const username = ref('')
+const email = ref('')
 const password = ref('')
 const showRecoveryDialog = ref(false)
 const recoveryCredentials = ref(null)
+const requiresTOTP = ref(false)
+const requiresTOTPSetup = ref(false)
+const totpCode = ref('')
+const verifyingTOTP = ref(false)
 
 // Restore scroll position when modal closes
 useScrollRestore(showRecoveryDialog)
@@ -183,13 +214,65 @@ const acknowledgeRecovery = () => {
   router.push('/')
 }
 
+const handleTOTPInput = (e) => {
+  // Only allow numbers
+  totpCode.value = e.target.value.replace(/\D/g, '').slice(0, 6)
+  // Auto-submit when 6 digits entered
+  if (totpCode.value.length === 6) {
+    handleTOTPVerify()
+  }
+}
+
+const handleTOTPVerify = async () => {
+  if (!totpCode.value || totpCode.value.length !== 6) {
+    authStore.error = 'Please enter a 6-digit code'
+    return
+  }
+
+  try {
+    verifyingTOTP.value = true
+    authStore.error = null
+    
+    const response = await verifyTOTP(username.value, totpCode.value)
+    authStore.user = response.user
+    router.push('/')
+  } catch (error) {
+    authStore.error = error.message || 'Invalid TOTP code'
+    totpCode.value = ''
+  } finally {
+    verifyingTOTP.value = false
+  }
+}
+
 const handleSubmit = async () => {
   try {
     if (isLogin.value) {
-      await authStore.login(username.value, password.value)
+      const response = await authStore.login(username.value, password.value)
+      
+      // Check if TOTP is required
+      if (response.requiresTOTP) {
+        requiresTOTP.value = true
+        return
+      }
+      
+      if (response.requiresTOTPSetup) {
+        router.push('/setup-totp?from=login')
+        return
+      }
+      
       router.push('/')
     } else {
-      const response = await authStore.register(username.value, password.value)
+      if (!email.value) {
+        authStore.error = 'Email is required'
+        return
+      }
+      const response = await authStore.register(username.value, email.value, password.value)
+      
+      if (response.requiresTOTPSetup) {
+        router.push('/setup-totp?from=register')
+        return
+      }
+      
       if (response.recovery) {
         recoveryCredentials.value = response.recovery
         showRecoveryDialog.value = true

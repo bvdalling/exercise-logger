@@ -44,7 +44,7 @@ RUN mkdir -p /app/data
 # Set environment variables
 ENV DATA_DIR=/app/data
 ENV PORT=3001
-ENV HOST=0.0.0.0
+ENV HOST=127.0.0.1
 ENV FRONTEND_PORT=5173
 
 # Copy startup script

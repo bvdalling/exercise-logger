@@ -21,10 +21,22 @@ const router = createRouter({
       meta: { requiresGuest: true }
     },
     {
+      path: '/forgot-password',
+      name: 'ForgotPassword',
+      component: () => import('@/views/ForgotPassword.vue'),
+      meta: { requiresGuest: true }
+    },
+    {
       path: '/reset-password',
       name: 'ResetPassword',
       component: () => import('@/views/ResetPassword.vue'),
       meta: { requiresGuest: true }
+    },
+    {
+      path: '/setup-totp',
+      name: 'TOTPSetup',
+      component: () => import('@/views/TOTPSetup.vue'),
+      meta: { requiresAuth: false }
     },
     {
       path: '/',
@@ -69,6 +81,18 @@ const router = createRouter({
       meta: { requiresAuth: true, title: 'Edit Workout' }
     },
     {
+      path: '/active-workout',
+      name: 'ActiveWorkout',
+      component: () => import('@/views/ActiveWorkout.vue'),
+      meta: { requiresAuth: true, title: 'Active Workout' }
+    },
+    {
+      path: '/email-settings',
+      name: 'EmailSettings',
+      component: () => import('@/views/EmailSettings.vue'),
+      meta: { requiresAuth: true, title: 'Email Settings' }
+    },
+    {
       path: '/:pathMatch(.*)*',
       redirect: '/'
     }
@@ -90,6 +114,14 @@ router.beforeEach(async (to, from, next) => {
     next('/login')
   } else if (requiresGuest && authStore.isAuthenticated) {
     next('/')
+  } else if (requiresAuth && authStore.isAuthenticated) {
+    // Check if TOTP is required but not set up
+    // Allow access to TOTP setup page
+    if (to.path !== '/setup-totp' && authStore.user && authStore.user.totp_enabled === false) {
+      next('/setup-totp')
+    } else {
+      next()
+    }
   } else {
     next()
   }

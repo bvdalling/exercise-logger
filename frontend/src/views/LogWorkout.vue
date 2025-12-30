@@ -14,6 +14,7 @@
                 id="exercise_id"
                 v-model="form.exercise_id"
                 :options="exercises"
+                :get-option-label="getExerciseLabel"
                 placeholder="Search for an exercise..."
                 :disabled="loading || exercisesLoading"
                 @change="onExerciseChange"
@@ -284,7 +285,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { getExercises, getLastWorkoutValues, createWorkoutLog, getWorkoutLog, updateWorkoutLog } from '@/composables/useApi'
+import { getExercises, getPublicExercises, getLastWorkoutValues, createWorkoutLog, getWorkoutLog, updateWorkoutLog } from '@/composables/useApi'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -318,11 +319,30 @@ const form = ref({
   notes: ''
 })
 
+const getExerciseLabel = (exercise) => {
+  if (exercise.isPublic) {
+    return `${exercise.name} (Platform Exercise)`
+  }
+  return exercise.name
+}
+
 const loadExercises = async () => {
   try {
     exercisesLoading.value = true
-    const response = await getExercises()
-    exercises.value = response.exercises
+    // Load both user exercises and public exercises
+    const [userExercisesResponse, publicExercisesResponse] = await Promise.all([
+      getExercises(),
+      getPublicExercises()
+    ])
+    
+    // Combine exercises, marking public exercises
+    const userExercises = userExercisesResponse.exercises.map(ex => ({ ...ex, isPublic: false }))
+    const publicExercises = publicExercisesResponse.exercises.map(ex => ({ ...ex, isPublic: true }))
+    
+    // Combine and sort by name
+    exercises.value = [...userExercises, ...publicExercises].sort((a, b) => 
+      a.name.localeCompare(b.name)
+    )
   } catch (err) {
     console.error('Failed to load exercises:', err)
     error.value = 'Failed to load exercises'

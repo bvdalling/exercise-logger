@@ -65,9 +65,12 @@ func GetAllWorkoutLogs(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(r)
 
 	query := `
-		SELECT wl.*, e.name as exercise_name, e.exercise_type
+		SELECT wl.*, 
+		       COALESCE(e.name, pe.name) as exercise_name,
+		       COALESCE(e.exercise_type, pe.exercise_type) as exercise_type
 		FROM workout_logs wl
-		JOIN exercises e ON wl.exercise_id = e.id
+		LEFT JOIN exercises e ON wl.exercise_id = e.id AND wl.user_id = e.user_id
+		LEFT JOIN public_exercises pe ON wl.exercise_id = pe.id
 		WHERE wl.user_id = ?
 	`
 	params := []interface{}{userID}
@@ -162,9 +165,12 @@ func GetWorkoutLogById(w http.ResponseWriter, r *http.Request) {
 	var weightPerSetStr, lapTimesStr sql.NullString
 	var createdAtStr string
 	err = database.DB.QueryRow(
-		`SELECT wl.*, e.name as exercise_name, e.exercise_type
+		`SELECT wl.*, 
+		       COALESCE(e.name, pe.name) as exercise_name,
+		       COALESCE(e.exercise_type, pe.exercise_type) as exercise_type
 		 FROM workout_logs wl
-		 JOIN exercises e ON wl.exercise_id = e.id
+		 LEFT JOIN exercises e ON wl.exercise_id = e.id AND wl.user_id = e.user_id
+		 LEFT JOIN public_exercises pe ON wl.exercise_id = pe.id
 		 WHERE wl.id = ? AND wl.user_id = ?`,
 		logID, userID,
 	).Scan(
@@ -221,11 +227,13 @@ func CreateWorkoutLog(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify exercise belongs to user and get exercise type
+	// Verify exercise exists (either user's exercise or public exercise) and get exercise type
 	var exerciseType string
 	err := database.DB.QueryRow(
-		"SELECT exercise_type FROM exercises WHERE id = ? AND user_id = ?",
-		req.ExerciseID, userID,
+		`SELECT exercise_type FROM exercises WHERE id = ? AND user_id = ?
+		 UNION ALL
+		 SELECT exercise_type FROM public_exercises WHERE id = ?`,
+		req.ExerciseID, userID, req.ExerciseID,
 	).Scan(&exerciseType)
 
 	if err == sql.ErrNoRows {
@@ -282,9 +290,12 @@ func CreateWorkoutLog(w http.ResponseWriter, r *http.Request) {
 	var weightPerSetStr2, lapTimesStr2 sql.NullString
 	var createdAtStr string
 	err = database.DB.QueryRow(
-		`SELECT wl.*, e.name as exercise_name, e.exercise_type
+		`SELECT wl.*, 
+		       COALESCE(e.name, pe.name) as exercise_name,
+		       COALESCE(e.exercise_type, pe.exercise_type) as exercise_type
 		 FROM workout_logs wl
-		 JOIN exercises e ON wl.exercise_id = e.id
+		 LEFT JOIN exercises e ON wl.exercise_id = e.id AND wl.user_id = e.user_id
+		 LEFT JOIN public_exercises pe ON wl.exercise_id = pe.id
 		 WHERE wl.id = ?`,
 		logID,
 	).Scan(
@@ -362,8 +373,10 @@ func UpdateWorkoutLog(w http.ResponseWriter, r *http.Request) {
 
 	var exerciseType string
 	err = database.DB.QueryRow(
-		"SELECT exercise_type FROM exercises WHERE id = ? AND user_id = ?",
-		currentExerciseID, userID,
+		`SELECT exercise_type FROM exercises WHERE id = ? AND user_id = ?
+		 UNION ALL
+		 SELECT exercise_type FROM public_exercises WHERE id = ?`,
+		currentExerciseID, userID, currentExerciseID,
 	).Scan(&exerciseType)
 
 	if err == sql.ErrNoRows {
@@ -461,9 +474,12 @@ func UpdateWorkoutLog(w http.ResponseWriter, r *http.Request) {
 	var weightPerSetStr, lapTimesStr sql.NullString
 	var createdAtStr string
 	err = database.DB.QueryRow(
-		`SELECT wl.*, e.name as exercise_name, e.exercise_type
+		`SELECT wl.*, 
+		       COALESCE(e.name, pe.name) as exercise_name,
+		       COALESCE(e.exercise_type, pe.exercise_type) as exercise_type
 		 FROM workout_logs wl
-		 JOIN exercises e ON wl.exercise_id = e.id
+		 LEFT JOIN exercises e ON wl.exercise_id = e.id AND wl.user_id = e.user_id
+		 LEFT JOIN public_exercises pe ON wl.exercise_id = pe.id
 		 WHERE wl.id = ?`,
 		logID,
 	).Scan(
@@ -567,11 +583,13 @@ func GetLastWorkoutValues(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify exercise belongs to user
+	// Verify exercise exists (either user's exercise or public exercise)
 	var exerciseExists int64
 	err = database.DB.QueryRow(
-		"SELECT id FROM exercises WHERE id = ? AND user_id = ?",
-		exerciseID, userID,
+		`SELECT id FROM exercises WHERE id = ? AND user_id = ?
+		 UNION ALL
+		 SELECT id FROM public_exercises WHERE id = ?`,
+		exerciseID, userID, exerciseID,
 	).Scan(&exerciseExists)
 
 	if err == sql.ErrNoRows {

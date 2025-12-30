@@ -14,7 +14,10 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
     try {
       const response = await apiLogin(username, password)
-      user.value = response.user
+      // Only set user if login is complete (not requiring TOTP)
+      if (response.user && !response.requiresTOTP && !response.requiresTOTPSetup) {
+        user.value = response.user
+      }
       return response
     } catch (err) {
       error.value = err.message || 'Login failed'
@@ -24,12 +27,15 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function register(username, password) {
+  async function register(username, email, password) {
     loading.value = true
     error.value = null
     try {
-      const response = await apiRegister(username, password)
-      user.value = response.user
+      const response = await apiRegister(username, email, password)
+      // Only set user if registration is complete (not requiring TOTP setup)
+      if (response.user && !response.requiresTOTPSetup) {
+        user.value = response.user
+      }
       return response
     } catch (err) {
       error.value = err.message || 'Registration failed'
@@ -39,11 +45,11 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function resetPassword(recoveryUuid, recoverySecret, newPassword) {
+  async function resetPassword(token, newPassword) {
     loading.value = true
     error.value = null
     try {
-      const response = await apiResetPassword(recoveryUuid, recoverySecret, newPassword)
+      const response = await apiResetPassword(token, newPassword)
       return response
     } catch (err) {
       error.value = err.message || 'Password reset failed'

@@ -11,12 +11,18 @@ import (
 	"gym-app-backend/database"
 	"gym-app-backend/handlers"
 	"gym-app-backend/middleware"
+	"gym-app-backend/services"
 )
 
 func main() {
 	// Initialize database
 	if err := database.InitializeDatabase(); err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
+	}
+
+	// Initialize email service
+	if err := services.InitializeEmailService(); err != nil {
+		log.Printf("Warning: Failed to initialize email service: %v (email features will be disabled)", err)
 	}
 
 	// Get configuration from environment
@@ -27,7 +33,7 @@ func main() {
 
 	host := os.Getenv("HOST")
 	if host == "" {
-		host = "0.0.0.0"
+		host = "127.0.0.1" // Default to localhost-only for internal access
 	}
 
 	// Setup routes
@@ -50,7 +56,17 @@ func main() {
 	mux.HandleFunc("/api/auth/login", handlers.Login)
 	mux.HandleFunc("/api/auth/logout", handlers.Logout)
 	mux.HandleFunc("/api/auth/me", middleware.RequireAuth(http.HandlerFunc(handlers.GetCurrentUser)).ServeHTTP)
+	mux.HandleFunc("/api/auth/request-password-reset", handlers.RequestPasswordReset)
 	mux.HandleFunc("/api/auth/reset-password", handlers.ResetPassword)
+	mux.HandleFunc("/api/auth/setup-totp", middleware.RequireAuth(http.HandlerFunc(handlers.SetupTOTP)).ServeHTTP)
+	mux.HandleFunc("/api/auth/verify-totp", handlers.VerifyTOTP)
+
+	// Reports routes
+	mux.HandleFunc("/api/reports/weekly", middleware.RequireAuth(http.HandlerFunc(handlers.SendWeeklyReport)).ServeHTTP)
+
+	// Public exercise routes (no auth required)
+	mux.HandleFunc("/api/public-exercises", handlers.GetAllPublicExercises)
+	mux.HandleFunc("/api/public-exercises/", handlers.GetPublicExerciseById)
 
 	// Exercise routes - exact match for list/create (with auth)
 	mux.HandleFunc("/api/exercises", middleware.RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

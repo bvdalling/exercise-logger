@@ -4,38 +4,14 @@
       <CardHeader class="p-8">
         <CardTitle class="text-3xl sm:text-4xl font-bold text-center">Reset Password</CardTitle>
         <CardDescription class="text-center text-base font-medium mt-3">
-          Enter your recovery credentials to reset your password
+          Enter your new password
         </CardDescription>
       </CardHeader>
       <CardContent class="p-8">
-        <form @submit.prevent="handleSubmit" class="space-y-6">
-          <div class="space-y-3">
-            <Label for="recoveryUuid" class="text-base font-semibold">Recovery ID (UUID)</Label>
-            <Input
-              id="recoveryUuid"
-              v-model="recoveryUuid"
-              type="text"
-              placeholder="Enter your recovery UUID"
-              required
-              :disabled="authStore.loading"
-              class="font-mono text-sm"
-            />
-          </div>
-          <div class="space-y-3">
-            <Label for="recoverySecret" class="text-base font-semibold">Recovery Secret</Label>
-            <Input
-              id="recoverySecret"
-              v-model="recoverySecret"
-              type="text"
-              placeholder="Enter your 32-character recovery secret"
-              required
-              :disabled="authStore.loading"
-              class="font-mono"
-            />
-            <p class="text-sm text-muted-foreground font-medium">
-              Enter the 32-character recovery secret (without hyphens)
-            </p>
-          </div>
+        <div v-if="!token" class="text-base text-red-600 dark:text-red-400 font-medium p-4 rounded-2xl glass-card dark:glass-card-dark mb-6">
+          Invalid or missing reset token. Please request a new password reset link.
+        </div>
+        <form v-else @submit.prevent="handleSubmit" class="space-y-6">
           <div class="space-y-3">
             <Label for="newPassword" class="text-base font-semibold">New Password</Label>
             <Input
@@ -93,8 +69,8 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -102,13 +78,17 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 
-const recoveryUuid = ref('')
-const recoverySecret = ref('')
+const token = ref('')
 const newPassword = ref('')
 const confirmPassword = ref('')
 const successMessage = ref('')
+
+onMounted(() => {
+  token.value = route.query.token || ''
+})
 
 const passwordMismatch = computed(() => {
   return newPassword.value && confirmPassword.value && newPassword.value !== confirmPassword.value
@@ -124,16 +104,13 @@ const handleSubmit = async () => {
     return
   }
 
-  // Remove any hyphens from recovery secret if user entered them
-  const cleanSecret = recoverySecret.value.replace(/-/g, '')
-
-  if (cleanSecret.length !== 32) {
-    authStore.error = 'Recovery secret must be exactly 32 characters'
+  if (!token.value) {
+    authStore.error = 'Invalid reset token'
     return
   }
 
   try {
-    await authStore.resetPassword(recoveryUuid.value, cleanSecret, newPassword.value)
+    await authStore.resetPassword(token.value, newPassword.value)
     successMessage.value = 'Password reset successfully! Redirecting to login...'
     setTimeout(() => {
       router.push('/login')
