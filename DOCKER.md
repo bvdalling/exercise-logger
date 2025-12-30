@@ -20,7 +20,7 @@ docker-compose logs -f
 docker-compose down
 ```
 
-**Note**: If ports 80 or 3001 are already in use on your machine, you'll need to modify the port mappings in `docker-compose.yml` before starting.
+**Note**: If ports 80 or 3001 are already in use on your machine, you'll need to modify the port mappings in `docker-compose.yaml` before starting.
 
 The services will be available at:
 - Frontend: http://localhost (port 80)
@@ -51,7 +51,7 @@ docker-compose up --build
 2. **Configure Build Pack**
    - Select "Docker Compose" as the build pack
    - **Base Directory**: `/` (root of repository)
-   - **Docker Compose Location**: `docker-compose.yml`
+   - **Docker Compose Location**: `docker-compose.yaml`
 
 3. **Configure Environment Variables**
 
@@ -80,7 +80,7 @@ docker-compose up --build
 
    The database is stored in `./backend/data` directory. 
 
-   **For Coolify**: If you want Coolify to automatically create the directory, you can update the volume configuration in `docker-compose.yml` to use Coolify's `is_directory` feature:
+   **For Coolify**: If you want Coolify to automatically create the directory, you can update the volume configuration in `docker-compose.yaml` to use Coolify's `is_directory` feature:
 
    ```yaml
    volumes:
